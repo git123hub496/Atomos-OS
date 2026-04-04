@@ -126,29 +126,29 @@ const BIOS = ({ onComplete }: { onComplete: () => void }) => {
   }, []);
 
   return (
-    <div className="fixed inset-0 bg-black z-[10000] font-mono text-sm p-12 flex flex-col gap-8">
+    <div className="fixed inset-0 bg-white z-[10000] font-mono text-sm p-12 flex flex-col gap-8">
       <div className="flex items-center gap-4">
         <div className="w-12 h-12 border-2 border-blue-500 rounded-lg flex items-center justify-center">
           <div className="w-8 h-8 border border-blue-500 rotate-45" />
         </div>
-        <h1 className="text-2xl font-bold tracking-tighter text-blue-500">ATOMOS BIOS</h1>
+        <h1 className="text-2xl font-bold tracking-tighter text-blue-600">ATOMOS BIOS</h1>
       </div>
-      <div className="flex-1 space-y-1 text-white/60">
+      <div className="flex-1 space-y-1 text-black/60">
         {logs.map((log, i) => (
           <div key={i} className="flex gap-4">
-            <span className="text-blue-500/50">[{format(new Date(), 'HH:mm:ss')}]</span>
+            <span className="text-blue-600/50">[{format(new Date(), 'HH:mm:ss')}]</span>
             <span>{log}</span>
           </div>
         ))}
       </div>
       <div className="space-y-2">
-        <div className="flex justify-between text-[10px] uppercase tracking-widest font-bold text-white/30">
+        <div className="flex justify-between text-[10px] uppercase tracking-widest font-bold text-black/30">
           <span>Booting Atomos OS</span>
           <span>{Math.round(progress)}%</span>
         </div>
-        <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+        <div className="h-1 w-full bg-black/5 rounded-full overflow-hidden">
           <motion.div 
-            className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+            className="h-full bg-blue-600 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
             animate={{ width: `${progress}%` }}
           />
         </div>
@@ -162,9 +162,9 @@ const Login = ({ onLogin, users }: { onLogin: (user: UserProfile) => void, users
   const [password, setPassword] = useState('');
 
   return (
-    <div className="fixed inset-0 bg-[#050505] z-[9000] flex items-center justify-center font-sans">
+    <div className="fixed inset-0 bg-white z-[9000] flex items-center justify-center font-sans">
       <div 
-        className="absolute inset-0 bg-cover bg-center opacity-30 blur-xl"
+        className="absolute inset-0 bg-cover bg-center opacity-10 blur-xl"
         style={{ backgroundImage: `url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop')` }}
       />
       <motion.div 
@@ -174,13 +174,13 @@ const Login = ({ onLogin, users }: { onLogin: (user: UserProfile) => void, users
       >
         <div className="flex flex-col items-center gap-4">
           <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 p-1 shadow-2xl">
-            <div className="w-full h-full rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-3xl font-bold text-white">
+            <div className="w-full h-full rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-3xl font-bold text-black">
               {selectedUser.name[0]}
             </div>
           </div>
           <div className="text-center">
-            <h2 className="text-2xl font-black tracking-tight text-white">{selectedUser.name}</h2>
-            <p className="text-xs font-bold uppercase tracking-widest text-white/30">{selectedUser.role}</p>
+            <h2 className="text-2xl font-black tracking-tight text-black">{selectedUser.name}</h2>
+            <p className="text-xs font-bold uppercase tracking-widest text-black/30">{selectedUser.role}</p>
           </div>
         </div>
 
@@ -191,7 +191,7 @@ const Login = ({ onLogin, users }: { onLogin: (user: UserProfile) => void, users
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && onLogin(selectedUser)}
-            className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-6 text-white text-center outline-none focus:border-blue-500/50 transition-all backdrop-blur-xl"
+            className="w-full bg-black/5 border border-black/10 rounded-2xl py-3 px-6 text-black text-center outline-none focus:border-blue-500/50 transition-all backdrop-blur-xl"
           />
           <button 
             onClick={() => onLogin(selectedUser)}
@@ -211,7 +211,7 @@ const Login = ({ onLogin, users }: { onLogin: (user: UserProfile) => void, users
                 selectedUser.name === user.name ? "border-blue-500 scale-110" : "border-transparent opacity-50 hover:opacity-100"
               )}
             >
-              <div className="w-full h-full bg-white/10 flex items-center justify-center text-xs font-bold text-white">
+              <div className="w-full h-full bg-black/10 flex items-center justify-center text-xs font-bold text-black">
                 {user.name[0]}
               </div>
             </button>
@@ -226,9 +226,9 @@ const Settings = ({ user, onUpdateUser }: { user: UserProfile, onUpdateUser: (u:
   const [activeTab, setActiveTab] = useState('profile');
 
   return (
-    <div className="flex h-full text-white font-sans">
-      <div className="w-64 bg-white/5 border-r border-white/10 p-6 space-y-2">
-        <div className="text-[10px] uppercase tracking-[0.2em] text-white/30 font-black mb-6">Settings</div>
+    <div className="flex h-full text-black font-sans">
+      <div className="w-64 bg-black/5 border-r border-black/10 p-6 space-y-2">
+        <div className="text-[10px] uppercase tracking-[0.2em] text-black/30 font-black mb-6">Settings</div>
         {[
           { id: 'profile', label: 'Profile', icon: <User size={16} /> },
           { id: 'appearance', label: 'Appearance', icon: <ImageIcon size={16} /> },
@@ -241,7 +241,7 @@ const Settings = ({ user, onUpdateUser }: { user: UserProfile, onUpdateUser: (u:
             onClick={() => setActiveTab(item.id)}
             className={cn(
               "w-full flex items-center gap-3 p-3 rounded-xl transition-all text-sm font-bold",
-              activeTab === item.id ? "bg-blue-600 text-white shadow-lg" : "text-white/50 hover:bg-white/5"
+              activeTab === item.id ? "bg-blue-600 text-white shadow-lg" : "text-black/50 hover:bg-black/5"
             )}
           >
             {item.icon}
@@ -254,34 +254,34 @@ const Settings = ({ user, onUpdateUser }: { user: UserProfile, onUpdateUser: (u:
           <div className="max-w-md space-y-8">
             <div>
               <h2 className="text-3xl font-black tracking-tight mb-2">Profile</h2>
-              <p className="text-white/30 text-sm">Manage your account and personal information.</p>
+              <p className="text-black/30 text-sm">Manage your account and personal information.</p>
             </div>
-            <div className="flex items-center gap-6 p-6 bg-white/5 rounded-3xl border border-white/10">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-2xl font-bold">
+            <div className="flex items-center gap-6 p-6 bg-black/5 rounded-3xl border border-black/10">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-2xl font-bold text-white">
                 {user.name[0]}
               </div>
               <div className="space-y-1">
                 <h3 className="text-xl font-bold">{user.name}</h3>
-                <p className="text-white/30 text-xs uppercase tracking-widest font-black">{user.role}</p>
+                <p className="text-black/30 text-xs uppercase tracking-widest font-black">{user.role}</p>
               </div>
             </div>
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-[10px] uppercase tracking-widest font-black text-white/30 ml-1">Display Name</label>
+                <label className="text-[10px] uppercase tracking-widest font-black text-black/30 ml-1">Display Name</label>
                 <input 
                   type="text" 
                   value={user.name}
                   onChange={(e) => onUpdateUser({ ...user, name: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-4 outline-none focus:border-blue-500/50 transition-all font-bold"
+                  className="w-full bg-black/5 border border-black/10 rounded-2xl py-3 px-4 outline-none focus:border-blue-500/50 transition-all font-bold"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] uppercase tracking-widest font-black text-white/30 ml-1">Role</label>
+                <label className="text-[10px] uppercase tracking-widest font-black text-black/30 ml-1">Role</label>
                 <input 
                   type="text" 
                   value={user.role}
                   onChange={(e) => onUpdateUser({ ...user, role: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-4 outline-none focus:border-blue-500/50 transition-all font-bold"
+                  className="w-full bg-black/5 border border-black/10 rounded-2xl py-3 px-4 outline-none focus:border-blue-500/50 transition-all font-bold"
                 />
               </div>
             </div>
@@ -291,19 +291,19 @@ const Settings = ({ user, onUpdateUser }: { user: UserProfile, onUpdateUser: (u:
           <div className="max-w-md space-y-8">
             <div>
               <h2 className="text-3xl font-black tracking-tight mb-2">About</h2>
-              <p className="text-white/30 text-sm">System information and version details.</p>
+              <p className="text-black/30 text-sm">System information and version details.</p>
             </div>
-            <div className="p-8 bg-gradient-to-br from-blue-600/20 to-purple-600/20 rounded-[3rem] border border-white/10 flex flex-col items-center text-center gap-6">
+            <div className="p-8 bg-gradient-to-br from-blue-600/10 to-purple-600/10 rounded-[3rem] border border-black/10 flex flex-col items-center text-center gap-6">
               <AtomosLogo className="w-24 h-24" />
               <div>
                 <h3 className="text-2xl font-black tracking-tight">Atomos OS</h3>
-                <p className="text-white/30 font-bold uppercase tracking-widest text-[10px] mt-1">Version 1.0.0 Stable</p>
+                <p className="text-black/30 font-bold uppercase tracking-widest text-[10px] mt-1">Version 1.0.0 Stable</p>
               </div>
-              <p className="text-white/60 text-sm leading-relaxed">
+              <p className="text-black/60 text-sm leading-relaxed">
                 A next-generation web-based operating system built by Nebulabs. Designed for performance, security, and beauty.
               </p>
               <div className="flex gap-4">
-                <button className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-full text-[10px] font-black uppercase tracking-widest transition-all">Check for Updates</button>
+                <button className="px-6 py-2 bg-black/10 hover:bg-black/20 rounded-full text-[10px] font-black uppercase tracking-widest transition-all">Check for Updates</button>
               </div>
             </div>
           </div>
@@ -507,25 +507,25 @@ const Window = ({
       dragMomentum={false}
       onPointerDown={onFocus}
       style={{ zIndex: window.zIndex }}
-      className="absolute top-20 left-1/4 w-[900px] h-[600px] bg-[#1a1a1a]/80 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+      className="absolute top-20 left-1/4 w-[900px] h-[600px] bg-white/80 backdrop-blur-3xl border border-black/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
     >
       {/* Title Bar */}
-      <div className="h-12 bg-white/5 flex items-center justify-between px-4 cursor-move select-none">
+      <div className="h-12 bg-black/5 flex items-center justify-between px-4 cursor-move select-none">
         <div className="flex items-center gap-3">
-          <div className="w-6 h-6 flex items-center justify-center text-white/70">{window.icon}</div>
-          <span className="text-xs font-bold uppercase tracking-widest text-white/90">{window.title}</span>
+          <div className="w-6 h-6 flex items-center justify-center text-black/70">{window.icon}</div>
+          <span className="text-xs font-bold uppercase tracking-widest text-black/90">{window.title}</span>
         </div>
         <div className="flex items-center gap-1">
           <button 
             onClick={(e) => { e.stopPropagation(); onMinimize(); }}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors"
+            className="p-2 hover:bg-black/10 rounded-full transition-colors"
           >
-            <Minimize2 size={16} className="text-white/70" />
+            <Minimize2 size={16} className="text-black/70" />
           </button>
           <button 
-            className="p-2 hover:bg-white/10 rounded-full transition-colors"
+            className="p-2 hover:bg-black/10 rounded-full transition-colors"
           >
-            <Maximize2 size={16} className="text-white/70" />
+            <Maximize2 size={16} className="text-black/70" />
           </button>
           <button 
             onClick={(e) => { e.stopPropagation(); onClose(); }}
@@ -537,7 +537,7 @@ const Window = ({
       </div>
       
       {/* Content */}
-      <div className="flex-1 overflow-auto bg-black/20">
+      <div className="flex-1 overflow-auto bg-white/20">
         {children}
       </div>
     </motion.div>
@@ -583,30 +583,30 @@ const AIAssistant = () => {
   };
 
   return (
-    <div className="flex flex-col h-full text-white">
-      <div className="h-14 bg-white/5 border-b border-white/10 flex items-center px-6 gap-3">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
+    <div className="flex flex-col h-full text-black">
+      <div className="h-14 bg-black/5 border-b border-black/10 flex items-center px-6 gap-3">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white">
           <Bot size={18} />
         </div>
         <div>
           <h3 className="text-sm font-black tracking-tight">Nebula AI</h3>
-          <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Powered by Gemini</p>
+          <p className="text-[10px] text-black/30 uppercase tracking-widest font-bold">Powered by Gemini</p>
         </div>
       </div>
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide">
         {messages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center text-center opacity-50 space-y-4">
-            <Bot size={48} />
-            <p className="text-lg font-medium">How can I help you today?</p>
+            <Bot size={48} className="text-black" />
+            <p className="text-lg font-medium text-black">How can I help you today?</p>
           </div>
         )}
         {messages.map((msg, i) => (
           <div key={i} className={cn("flex gap-3", msg.role === 'user' ? "flex-row-reverse" : "flex-row")}>
-            <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", msg.role === 'user' ? "bg-blue-600" : "bg-purple-600")}>
+            <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white", msg.role === 'user' ? "bg-blue-600" : "bg-purple-600")}>
               {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
             </div>
-            <div className={cn("max-w-[80%] p-3 rounded-2xl text-sm", msg.role === 'user' ? "bg-blue-600/20 rounded-tr-none" : "bg-white/10 rounded-tl-none")}>
-              <div className="prose prose-invert prose-sm max-w-none">
+            <div className={cn("max-w-[80%] p-3 rounded-2xl text-sm", msg.role === 'user' ? "bg-blue-600/10 text-black rounded-tr-none" : "bg-black/5 text-black rounded-tl-none")}>
+              <div className="prose prose-sm max-w-none prose-headings:text-black prose-p:text-black prose-strong:text-black">
                 <ReactMarkdown>
                   {msg.content}
                 </ReactMarkdown>
@@ -616,28 +616,28 @@ const AIAssistant = () => {
         ))}
         {isLoading && (
           <div className="flex gap-3 animate-pulse">
-            <div className="w-8 h-8 rounded-full bg-purple-600/50 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-purple-600/50 flex items-center justify-center text-white">
               <Bot size={16} />
             </div>
-            <div className="bg-white/5 p-3 rounded-2xl rounded-tl-none text-sm">
+            <div className="bg-black/5 p-3 rounded-2xl rounded-tl-none text-sm text-black">
               Thinking...
             </div>
           </div>
         )}
       </div>
-      <div className="p-4 bg-white/5 border-t border-white/10 flex gap-2">
+      <div className="p-4 bg-black/5 border-t border-black/10 flex gap-2">
         <input 
           type="text" 
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
           placeholder="Ask me anything..."
-          className="flex-1 bg-white/10 border border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-blue-500/50 transition-colors"
+          className="flex-1 bg-black/5 border border-black/10 rounded-lg px-4 py-2 text-sm text-black focus:outline-none focus:border-blue-500/50 transition-colors"
         />
         <button 
           onClick={handleSend}
           disabled={isLoading}
-          className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors disabled:opacity-50"
+          className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors disabled:opacity-50 text-white"
         >
           <Send size={18} />
         </button>
@@ -697,36 +697,36 @@ const Browser = () => {
 
 const Files = () => {
   const folders = [
-    { name: 'Documents', color: 'text-blue-400', bg: 'bg-blue-500/10' },
-    { name: 'Downloads', color: 'text-green-400', bg: 'bg-green-500/10' },
-    { name: 'Pictures', color: 'text-purple-400', bg: 'bg-purple-500/10' },
-    { name: 'Music', color: 'text-pink-400', bg: 'bg-pink-500/10' },
-    { name: 'Videos', color: 'text-red-400', bg: 'bg-red-500/10' },
-    { name: 'System', color: 'text-gray-400', bg: 'bg-gray-500/10' }
+    { name: 'Documents', color: 'text-blue-600', bg: 'bg-blue-600/10' },
+    { name: 'Downloads', color: 'text-green-600', bg: 'bg-green-600/10' },
+    { name: 'Pictures', color: 'text-purple-600', bg: 'bg-purple-600/10' },
+    { name: 'Music', color: 'text-pink-600', bg: 'bg-pink-600/10' },
+    { name: 'Videos', color: 'text-red-600', bg: 'bg-red-600/10' },
+    { name: 'System', color: 'text-gray-600', bg: 'bg-gray-600/10' }
   ];
   return (
-    <div className="flex h-full text-white font-sans">
-      <div className="w-56 bg-white/5 border-r border-white/10 p-6 space-y-6">
+    <div className="flex h-full text-black font-sans">
+      <div className="w-56 bg-black/5 border-r border-black/10 p-6 space-y-6">
         <div>
-          <div className="text-[10px] uppercase tracking-[0.2em] text-white/30 font-black mb-4">Favorites</div>
+          <div className="text-[10px] uppercase tracking-[0.2em] text-black/30 font-black mb-4">Favorites</div>
           <div className="space-y-1">
             {folders.map(f => (
-              <div key={f.name} className="flex items-center gap-3 p-2.5 hover:bg-white/10 rounded-xl cursor-pointer transition-all text-sm group">
+              <div key={f.name} className="flex items-center gap-3 p-2.5 hover:bg-black/10 rounded-xl cursor-pointer transition-all text-sm group">
                 <Folder size={16} className={cn("transition-transform group-hover:scale-110", f.color)} />
-                <span className="text-white/70 group-hover:text-white">{f.name}</span>
+                <span className="text-black/70 group-hover:text-black">{f.name}</span>
               </div>
             ))}
           </div>
         </div>
         <div>
-          <div className="text-[10px] uppercase tracking-[0.2em] text-white/30 font-black mb-4">Storage</div>
-          <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
+          <div className="text-[10px] uppercase tracking-[0.2em] text-black/30 font-black mb-4">Storage</div>
+          <div className="p-3 bg-black/5 rounded-2xl border border-black/10">
             <div className="flex justify-between text-[10px] mb-2 font-bold">
-              <span className="text-white/40 uppercase">Atomos HD</span>
-              <span className="text-blue-400">64%</span>
+              <span className="text-black/40 uppercase">Atomos HD</span>
+              <span className="text-blue-600">64%</span>
             </div>
-            <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-              <div className="h-full w-[64%] bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+            <div className="h-1.5 w-full bg-black/10 rounded-full overflow-hidden">
+              <div className="h-full w-[64%] bg-blue-600 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
             </div>
           </div>
         </div>
@@ -735,19 +735,19 @@ const Files = () => {
         <div className="flex items-center justify-between mb-10">
           <div>
             <h2 className="text-3xl font-black tracking-tight">Home</h2>
-            <p className="text-white/30 text-xs font-bold uppercase tracking-widest mt-1">/users/atomos/home</p>
+            <p className="text-black/30 text-xs font-bold uppercase tracking-widest mt-1">/users/atomos/home</p>
           </div>
           <div className="flex gap-3">
-            <div className="p-3 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-colors cursor-pointer"><Search size={18} /></div>
+            <div className="p-3 bg-black/5 rounded-xl border border-black/10 hover:bg-black/10 transition-colors cursor-pointer"><Search size={18} /></div>
           </div>
         </div>
         <div className="grid grid-cols-3 xl:grid-cols-4 gap-8">
           {folders.map(f => (
-            <div key={f.name} className="group flex flex-col items-center gap-4 p-6 hover:bg-white/5 rounded-3xl cursor-pointer transition-all border border-transparent hover:border-white/10">
+            <div key={f.name} className="group flex flex-col items-center gap-4 p-6 hover:bg-white/5 rounded-3xl cursor-pointer transition-all border border-transparent hover:border-black/10">
               <div className={cn("w-20 h-20 rounded-[2rem] flex items-center justify-center group-hover:scale-110 transition-transform shadow-xl", f.bg)}>
                 <Folder size={40} className={f.color} />
               </div>
-              <span className="text-sm font-bold tracking-wide text-white/80 group-hover:text-white">{f.name}</span>
+              <span className="text-sm font-bold tracking-wide text-black/80 group-hover:text-black">{f.name}</span>
             </div>
           ))}
         </div>
@@ -791,7 +791,7 @@ const Terminal = () => {
  /____\\      Kernel: WebKit 6.0
              Uptime: 2 hours
              Shell: atomos-sh
-             Theme: Nebularite Dark
+             Theme: Nebularite Light
         `;
         break;
       default:
@@ -803,18 +803,18 @@ const Terminal = () => {
   };
 
   return (
-    <div className="h-full bg-black/80 p-4 font-mono text-sm text-green-400 overflow-y-auto">
+    <div className="h-full bg-white/90 p-4 font-mono text-sm text-black overflow-y-auto">
       {history.map((line, i) => (
         <div key={i} className="whitespace-pre-wrap mb-1">{line}</div>
       ))}
       <form onSubmit={handleCommand} className="flex">
-        <span className="mr-2 text-blue-400">user@atomos:~$</span>
+        <span className="mr-2 text-blue-600 font-bold">user@atomos:~$</span>
         <input 
           autoFocus
           type="text" 
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          className="flex-1 bg-transparent outline-none border-none p-0"
+          className="flex-1 bg-transparent outline-none border-none p-0 text-black"
         />
       </form>
     </div>
@@ -824,19 +824,19 @@ const Terminal = () => {
 const Notes = () => {
   const [text, setText] = useState('# Welcome to Atomos Notes\n\nThis is your personal workspace for ideas, drafts, and quick thoughts.\n\n- [ ] Task 1\n- [ ] Task 2\n- [ ] Task 3\n\nFeel free to edit this note!');
   return (
-    <div className="h-full flex flex-col bg-[#1a1a1a]">
-      <div className="h-10 bg-white/5 border-b border-white/10 flex items-center px-4 gap-4">
+    <div className="h-full flex flex-col bg-white">
+      <div className="h-10 bg-black/5 border-b border-black/10 flex items-center px-4 gap-4">
         <div className="flex gap-2">
-          <div className="w-2 h-2 rounded-full bg-white/20" />
-          <div className="w-2 h-2 rounded-full bg-white/20" />
-          <div className="w-2 h-2 rounded-full bg-white/20" />
+          <div className="w-2 h-2 rounded-full bg-black/20" />
+          <div className="w-2 h-2 rounded-full bg-black/20" />
+          <div className="w-2 h-2 rounded-full bg-black/20" />
         </div>
-        <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Untitled Note</span>
+        <span className="text-[10px] font-bold uppercase tracking-widest text-black/40">Untitled Note</span>
       </div>
       <textarea 
         value={text}
         onChange={(e) => setText(e.target.value)}
-        className="flex-1 bg-transparent p-8 outline-none resize-none font-mono text-sm text-white/80 leading-relaxed"
+        className="flex-1 bg-transparent p-8 outline-none resize-none font-mono text-sm text-black leading-relaxed"
         placeholder="Start typing..."
       />
     </div>
@@ -939,12 +939,12 @@ export default function App() {
       {/* Sidebar */}
       <div className="absolute left-8 top-12 flex flex-col gap-8">
         {[
-          { id: 'files', icon: <Folder size={24} />, label: 'Files', color: 'bg-blue-500' },
-          { id: 'browser', icon: <Globe size={24} />, label: 'Browser', color: 'bg-indigo-500' },
-          { id: 'ai', icon: <MessageSquare size={24} />, label: 'AI Assistant', color: 'bg-purple-500' },
-          { id: 'magic-edit', icon: <ImageIcon size={24} />, label: 'Paint', color: 'bg-blue-400' },
-          { id: 'notes', icon: <FileText size={24} />, label: 'Notes', color: 'bg-amber-500' },
-          { id: 'settings', icon: <SettingsIcon size={24} />, label: 'Settings', color: 'bg-gray-500' },
+          { id: 'files', icon: <Folder size={24} />, label: 'Files', color: 'bg-blue-600' },
+          { id: 'browser', icon: <Globe size={24} />, label: 'Browser', color: 'bg-indigo-600' },
+          { id: 'ai', icon: <MessageSquare size={24} />, label: 'AI Assistant', color: 'bg-purple-600' },
+          { id: 'magic-edit', icon: <ImageIcon size={24} />, label: 'Paint', color: 'bg-blue-500' },
+          { id: 'notes', icon: <FileText size={24} />, label: 'Notes', color: 'bg-amber-600' },
+          { id: 'settings', icon: <SettingsIcon size={24} />, label: 'Settings', color: 'bg-gray-600' },
           { id: 'terminal', icon: <TerminalIcon size={24} />, label: 'Terminal', color: 'bg-gray-800' },
         ].map((app) => (
           <button
@@ -958,7 +958,7 @@ export default function App() {
             )}>
               {app.icon}
             </div>
-            <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/60 drop-shadow-md">
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-black drop-shadow-sm">
               {app.label}
             </span>
           </button>
@@ -984,7 +984,7 @@ export default function App() {
                 {win.id === 'notes' && <Notes />}
                 {win.id === 'settings' && <Settings user={currentUser} onUpdateUser={setCurrentUser} />}
                 {['camera', 'mail', 'calendar', 'magic-edit'].includes(win.id) && (
-                  <div className="p-8 text-white/50 italic h-full flex items-center justify-center">
+                  <div className="p-8 text-black/50 italic h-full flex items-center justify-center">
                     Module coming soon...
                   </div>
                 )}
