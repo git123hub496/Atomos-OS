@@ -64,14 +64,14 @@ const CustomCursor = () => {
   }, []);
 
   return (
-    <motion.div
+    <div
       className="fixed top-0 left-0 pointer-events-none z-[9999] drop-shadow-[0_4px_4px_rgba(0,0,0,0.25)]"
-      animate={{ 
-        x: position.x, 
-        y: position.y,
-        scale: isPointer ? 1.1 : 1
+      style={{ 
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        transform: `translate(-2px, -2px) scale(${isPointer ? 1.1 : 1})`,
+        transition: 'transform 0.1s ease-out'
       }}
-      transition={{ type: 'spring', damping: 30, stiffness: 400, mass: 0.4 }}
     >
       <svg 
         width="32" 
@@ -79,7 +79,6 @@ const CustomCursor = () => {
         viewBox="0 0 32 32" 
         fill="none" 
         xmlns="http://www.w3.org/2000/svg"
-        style={{ transform: 'translate(-2px, -2px)' }}
       >
         <path 
           d="M6 4V27.5L12.5 21L16.5 29L20 27.5L16 19.5H25L6 4Z" 
@@ -89,7 +88,7 @@ const CustomCursor = () => {
           strokeLinejoin="round"
         />
       </svg>
-    </motion.div>
+    </div>
   );
 };
 
@@ -222,8 +221,19 @@ const Login = ({ onLogin, users }: { onLogin: (user: UserProfile) => void, users
   );
 };
 
-const Settings = ({ user, onUpdateUser }: { user: UserProfile, onUpdateUser: (u: UserProfile) => void }) => {
+const Settings = ({ 
+  user, 
+  onUpdateUser,
+  onFactoryReset,
+  onResetToNebulaOSLink
+}: { 
+  user: UserProfile, 
+  onUpdateUser: (u: UserProfile) => void,
+  onFactoryReset?: () => void,
+  onResetToNebulaOSLink?: () => void
+}) => {
   const [activeTab, setActiveTab] = useState('profile');
+  const [showWipeConfirm, setShowWipeConfirm] = useState(false);
 
   return (
     <div className="flex h-full text-white font-sans">
@@ -288,7 +298,7 @@ const Settings = ({ user, onUpdateUser }: { user: UserProfile, onUpdateUser: (u:
           </div>
         )}
         {activeTab === 'about' && (
-          <div className="max-w-md space-y-8">
+          <div className="max-w-md space-y-6">
             <div>
               <h2 className="text-3xl font-black tracking-tight mb-2">About</h2>
               <p className="text-white/30 text-sm">System information and version details.</p>
@@ -304,6 +314,52 @@ const Settings = ({ user, onUpdateUser }: { user: UserProfile, onUpdateUser: (u:
               </p>
               <div className="flex gap-4">
                 <button className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-full text-[10px] font-black uppercase tracking-widest transition-all">Check for Updates</button>
+              </div>
+            </div>
+
+            <div className="p-6 bg-white/5 border border-white/10 rounded-[2rem] space-y-4">
+              <div className="text-left">
+                <h4 className="text-xs font-black text-white uppercase tracking-widest">System Recovery</h4>
+                <p className="text-white/30 text-[10px] uppercase font-bold tracking-wider mt-0.5">Wipe system configurations or sync remote nodes</p>
+              </div>
+
+              <div className="space-y-2.5">
+                <button
+                  onClick={onResetToNebulaOSLink}
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md cursor-pointer text-center"
+                >
+                  Factory Reset to nebulaoslink
+                </button>
+
+                {!showWipeConfirm ? (
+                  <button
+                    onClick={() => setShowWipeConfirm(true)}
+                    className="w-full py-3 bg-red-600/10 hover:bg-red-600 hover:text-white border border-red-500/20 rounded-xl text-xs font-black uppercase tracking-wider text-red-500 transition-all cursor-pointer text-center"
+                  >
+                    Just Reset (Wipes Data)
+                  </button>
+                ) : (
+                  <div className="bg-red-950/20 border border-red-500/30 rounded-2xl p-4 flex flex-col gap-3">
+                    <p className="text-[10px] text-red-400 font-bold uppercase tracking-wider text-center">Are you absolutely sure? All files, mail, and local data will be deleted instantly.</p>
+                    <div className="flex gap-2.5">
+                      <button
+                        onClick={() => setShowWipeConfirm(false)}
+                        className="flex-1 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold transition-all text-white/80 cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowWipeConfirm(false);
+                          if (onFactoryReset) onFactoryReset();
+                        }}
+                        className="flex-1 py-2 bg-red-600 hover:bg-red-500 rounded-xl text-xs font-black uppercase tracking-wider text-white transition-all cursor-pointer"
+                      >
+                        Confirm Wipe
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -646,50 +702,440 @@ const AIAssistant = () => {
   );
 };
 
-const Browser = () => {
-  const [url, setUrl] = useState('https://nebulabs.os');
+const Browser = ({ 
+  onFactoryReset, 
+  url, 
+  onUrlChange 
+}: { 
+  onFactoryReset?: () => void, 
+  url: string, 
+  onUrlChange: (url: string) => void 
+}) => {
+  const [inputValue, setInputValue] = useState(url);
+  const [isWiping, setIsWiping] = useState(false);
+  const [wipeProgress, setWipeProgress] = useState(0);
+  const [showWipeModal, setShowWipeModal] = useState(false);
+  const [wipeStatusText, setWipeStatusText] = useState('');
+
+  useEffect(() => {
+    setInputValue(url);
+  }, [url]);
+
+  const navigateTo = (newUrl: string) => {
+    let formatted = newUrl.trim();
+    if (!formatted.startsWith('http://') && !formatted.startsWith('https://')) {
+      formatted = 'https://' + formatted;
+    }
+    onUrlChange(formatted);
+    setInputValue(formatted);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      navigateTo(inputValue);
+    }
+  };
+
+  const cleanUrl = url.toLowerCase().replace(/^(https?:\/\/)?(www\.)?/, '');
+
+  const isOSLinkPage = cleanUrl.startsWith('nebula-os-link.vercel.app');
+  const isDefaultPage = cleanUrl.startsWith('nebulabs.os') || cleanUrl === '';
+
+  const triggerFactoryReset = () => {
+    setShowWipeModal(true);
+  };
+
+  const confirmFactoryReset = () => {
+    setShowWipeModal(false);
+    setIsWiping(true);
+    setWipeProgress(0);
+    
+    const statuses = [
+      "Initializing secure remote wipe protocols...",
+      "Dismounting active storage file systems...",
+      "Erasing persistent database partitions...",
+      "Clearing kernel cache and temporary logs...",
+      "Writing zeros to virtual sectors...",
+      "Rebuilding factory standard bootloader...",
+      "Rebooting dev host into Atomos BIOS loader..."
+    ];
+
+    let currentStatusIndex = 0;
+    setWipeStatusText(statuses[0]);
+
+    const interval = setInterval(() => {
+      setWipeProgress(prev => {
+        const next = prev + 4;
+        
+        // Update status texts based on completion percentage
+        const textIdx = Math.min(
+          Math.floor((next / 100) * statuses.length),
+          statuses.length - 1
+        );
+        setWipeStatusText(statuses[textIdx]);
+
+        if (next >= 100) {
+          clearInterval(interval);
+          setTimeout(() => {
+            setIsWiping(false);
+            if (onFactoryReset) {
+              onFactoryReset();
+            }
+          }, 800);
+          return 100;
+        }
+        return next;
+      });
+    }, 150);
+  };
+
   return (
-    <div className="flex flex-col h-full bg-white text-black font-sans">
-      <div className="h-14 bg-gray-50 border-b flex items-center px-6 gap-6">
+    <div className="flex flex-col h-full bg-[#0a0a0c] text-white font-sans overflow-hidden">
+      {/* Browser Controls */}
+      <div className="h-14 bg-black/40 border-b border-white/10 flex items-center px-6 gap-4 backdrop-blur-md shrink-0">
         <div className="flex gap-2">
-          <div className="w-3 h-3 rounded-full bg-red-400 shadow-sm" />
-          <div className="w-3 h-3 rounded-full bg-yellow-400 shadow-sm" />
-          <div className="w-3 h-3 rounded-full bg-green-400 shadow-sm" />
+          <button 
+            onClick={() => navigateTo('https://nebulabs.os')} 
+            className="w-3 h-3 rounded-full bg-red-500/80 hover:bg-red-500 transition-colors cursor-pointer" 
+            title="Home"
+          />
+          <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+          <div className="w-3 h-3 rounded-full bg-green-500/80" />
         </div>
-        <div className="flex-1 max-w-2xl mx-auto bg-white border border-gray-200 rounded-full px-4 py-1.5 text-sm flex items-center gap-3 shadow-sm focus-within:border-blue-500/50 transition-all">
-          <Globe size={14} className="text-gray-400" />
+        
+        {/* Navigation Buttons */}
+        <div className="flex items-center gap-1.5 text-white/40">
+          <button 
+            onClick={() => navigateTo('https://nebulabs.os')} 
+            className="p-1 hover:bg-white/5 rounded-lg hover:text-white transition-all cursor-pointer"
+            title="Back to Home"
+          >
+            <ChevronRight className="rotate-180" size={16} />
+          </button>
+        </div>
+
+        {/* URL Address Bar */}
+        <div className="flex-1 max-w-2xl mx-auto bg-white/5 border border-white/10 rounded-xl px-4 py-1.5 text-sm flex items-center gap-3 focus-within:border-blue-500/40 transition-all backdrop-blur-md">
+          <Globe size={14} className="text-white/40" />
           <input 
             type="text" 
-            value={url} 
-            onChange={(e) => setUrl(e.target.value)}
-            className="flex-1 bg-transparent outline-none text-gray-600"
+            value={inputValue} 
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="flex-1 bg-transparent outline-none text-white/80 text-xs font-medium"
+            placeholder="Search or enter web address..."
           />
+          {inputValue !== url && (
+            <button 
+              onClick={() => navigateTo(inputValue)}
+              className="px-2 py-0.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 rounded text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
+            >
+              Go
+            </button>
+          )}
         </div>
-        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
-          <User size={16} />
+
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] uppercase tracking-widest font-black text-white/30 hidden sm:inline">Secure Node</span>
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
         </div>
       </div>
-      <div className="flex-1 flex flex-col items-center justify-center bg-gradient-to-b from-white to-gray-50 p-12 text-center">
-        <div className="w-28 h-28 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-2xl transform hover:rotate-6 transition-transform">
-          <Globe size={56} className="text-white" />
-        </div>
-        <h1 className="text-4xl font-extrabold mb-3 tracking-tight text-gray-900">Nebulabs OS</h1>
-        <p className="text-gray-500 max-w-lg text-lg leading-relaxed">The next generation of web-based computing. Fast, secure, and beautiful by design.</p>
-        <div className="mt-12 grid grid-cols-2 gap-6 w-full max-w-xl">
-          {[
-            { name: 'Documentation', icon: <FileText size={18} /> },
-            { name: 'Community', icon: <MessageSquare size={18} /> },
-            { name: 'GitHub', icon: <TerminalIcon size={18} /> },
-            { name: 'Support', icon: <Mail size={18} /> }
-          ].map(item => (
-            <div key={item.name} className="group p-6 bg-white border border-gray-100 rounded-2xl hover:shadow-xl hover:border-blue-500/20 transition-all cursor-pointer flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                {item.icon}
+
+      {/* Bookmarks Bar */}
+      <div className="h-9 bg-black/20 border-b border-white/5 flex items-center px-6 gap-4 text-xs font-bold text-white/50 shrink-0 select-none">
+        <span className="text-[9px] uppercase tracking-[0.2em] text-white/20 font-black mr-2">Bookmarks:</span>
+        <button 
+          onClick={() => navigateTo('https://nebulabs.os')} 
+          className={cn(
+            "flex items-center gap-1.5 px-2 py-1 rounded-md transition-all cursor-pointer", 
+            isDefaultPage ? "bg-white/5 text-white" : "hover:text-white hover:bg-white/5"
+          )}
+        >
+          <Folder size={12} className="text-blue-400" />
+          <span>Nebulabs Home</span>
+        </button>
+        <button 
+          onClick={() => navigateTo('https://nebula-os-link.vercel.app')} 
+          className={cn(
+            "flex items-center gap-1.5 px-2 py-1 rounded-md transition-all cursor-pointer", 
+            isOSLinkPage ? "bg-blue-600/10 text-blue-400 border border-blue-500/20" : "hover:text-white hover:bg-white/5"
+          )}
+        >
+          <SettingsIcon size={12} className="text-purple-400" />
+          <span className="text-blue-400">Nebula OS Link</span>
+        </button>
+      </div>
+
+      {/* Browser Body Area */}
+      <div className="flex-1 overflow-y-auto relative bg-[#0b0c10]">
+        
+        {/* WIPING SCREEN OVERLAY */}
+        {isWiping && (
+          <div className="absolute inset-0 bg-[#040406]/98 z-[100] flex flex-col items-center justify-center p-12 select-none">
+            <div className="w-16 h-16 rounded-full border-4 border-t-red-500 border-r-transparent border-b-red-500 border-l-transparent animate-spin mb-8 shadow-[0_0_15px_rgba(239,68,68,0.3)]" />
+            
+            <h2 className="text-2xl font-black text-red-500 uppercase tracking-widest mb-2 animate-pulse">Wiping Memory Space</h2>
+            <p className="text-white/40 text-xs font-bold uppercase tracking-widest text-center max-w-md h-8 mb-6">{wipeStatusText}</p>
+            
+            <div className="w-80 max-w-full space-y-2">
+              <div className="flex justify-between text-[10px] uppercase tracking-widest font-black text-white/30">
+                <span>Total Partition Progress</span>
+                <span className="text-red-400">{wipeProgress}%</span>
               </div>
-              <span className="font-semibold text-gray-700">{item.name}</span>
+              <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                <div 
+                  className="h-full bg-gradient-to-r from-red-600 to-orange-500 shadow-[0_0_8px_rgba(239,68,68,0.5)] transition-all duration-150"
+                  style={{ width: `${wipeProgress}%` }}
+                />
+              </div>
             </div>
-          ))}
-        </div>
+          </div>
+        )}
+
+        {/* FACTORY RESET CONFIRMATION MODAL */}
+        {showWipeModal && (
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-[99] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="w-[440px] bg-[#141418] border border-red-500/30 rounded-[2rem] p-8 shadow-[0_15px_50px_rgba(0,0,0,0.8)] flex flex-col items-center text-center gap-6"
+            >
+              <div className="w-16 h-16 rounded-3xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.1)]">
+                <X size={32} className="rotate-45" />
+              </div>
+
+              <div>
+                <h3 className="text-2xl font-black text-white tracking-tight">Perform OS Factory Reset?</h3>
+                <p className="text-white/40 font-bold uppercase tracking-widest text-[9px] mt-1">Remote Link Wipe Confirmation</p>
+              </div>
+
+              <p className="text-white/60 text-xs leading-relaxed max-w-xs">
+                This will wipe the Atomos OS local files, profile configs, reset your workspace, and completely reboot back to the boot bios loader.
+              </p>
+
+              <div className="flex gap-3 w-full mt-2">
+                <button 
+                  onClick={() => setShowWipeModal(false)}
+                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold transition-all border border-white/5"
+                >
+                  Cancel Link
+                </button>
+                <button 
+                  onClick={confirmFactoryReset}
+                  className="flex-1 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-xl shadow-red-950/20 active:scale-95 border border-red-500/20"
+                >
+                  Confirm Reset
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* 1. NEBULA OS LINK RENDER */}
+        {isOSLinkPage && (
+          <div className="min-h-full p-8 sm:p-12 relative flex flex-col justify-between max-w-4xl mx-auto space-y-12">
+            
+            {/* Background design elements */}
+            <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#3b82f6]/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-[#3b82f6]/10 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Header section */}
+            <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-b border-white/10 pb-8">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-blue-400 flex items-center justify-center shadow-lg shadow-blue-950/20 p-1">
+                  <div className="w-full h-full bg-[#050505] rounded-xl flex items-center justify-center">
+                    <SettingsIcon size={24} className="text-blue-400" />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-2xl font-black tracking-tight text-white">Nebula OS Link</h1>
+                    <span className="text-[9px] font-black uppercase bg-blue-500/10 text-blue-400 tracking-wider px-2 py-0.5 rounded-full border border-blue-500/20">Active v1.02</span>
+                  </div>
+                  <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest mt-0.5">Cloud Device Coordinator & Remote Manager</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-4 py-2.5 rounded-2xl text-xs backdrop-blur-md">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-white/60 font-medium">Link Service Sync Active</span>
+              </div>
+            </div>
+
+            {/* Main content grid */}
+            <div className="relative grid grid-cols-1 md:grid-cols-3 gap-6">
+              
+              {/* Linked Devices */}
+              <div className="md:col-span-2 space-y-4">
+                <h3 className="text-xs uppercase tracking-widest text-white/30 font-black px-1">Active Sync node</h3>
+                
+                <div className="p-6 bg-white/5 border border-white/10 rounded-[2rem] flex items-center justify-between backdrop-blur-md hover:border-blue-500/30 transition-all group">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                      <TerminalIcon size={20} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-white group-hover:text-blue-300 transition-colors">Atomos OS Terminal</span>
+                        <span className="text-[8px] uppercase tracking-widest font-black text-green-400 bg-green-400/10 border border-green-500/20 px-1.5 py-0.5 rounded">This Node</span>
+                      </div>
+                      <p className="text-[10px] text-white/40 font-mono mt-0.5">UUID: neb-2a65a-068d-4cbd</p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-right">
+                    <span className="text-xs text-green-400 font-bold font-mono">ONLINE</span>
+                    <p className="text-[9px] text-white/30 font-bold uppercase tracking-widest mt-0.5 font-mono">Port 3000</p>
+                  </div>
+                </div>
+
+                {/* Second device mockup */}
+                <div className="p-6 bg-white/[0.02] border border-white/5 rounded-[2rem] flex items-center justify-between opacity-50 select-none">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/30">
+                      <Globe size={20} />
+                    </div>
+                    <div>
+                      <span className="font-bold text-sm text-white/60">Nebula Phone Sync</span>
+                      <p className="text-[10px] text-white/30 font-mono mt-0.5">UUID: neb-90b14-83ef-1110</p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-right">
+                    <span className="text-xs text-white/30 font-bold block">OFFLINE</span>
+                    <p className="text-[9px] text-white/20 font-bold uppercase tracking-widest mt-0.5 font-mono">Last 3d ago</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status and Diagnostics */}
+              <div className="space-y-4">
+                <h3 className="text-xs uppercase tracking-widest text-white/30 font-black px-1">Node Diagnostics</h3>
+                
+                <div className="p-6 bg-white/5 border border-white/10 rounded-[2rem] space-y-4 backdrop-blur-md">
+                  <div className="space-y-1">
+                    <span className="text-[8px] uppercase tracking-widest font-black text-white/30">Operating Version</span>
+                    <p className="text-xs font-bold text-white/80">Atomos OS v1.0.0 Stable</p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[8px] uppercase tracking-widest font-black text-white/30">MAC ADD:RESS</span>
+                    <p className="font-mono text-xs text-white/60">E4:C0:A4:1F:B1:05</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-[8px] uppercase tracking-widest font-black text-white/30">
+                      <span>Device Disk Space</span>
+                      <span>64%</span>
+                    </div>
+                    <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                      <div className="h-full w-[64%] bg-gradient-to-r from-blue-500 to-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.3)]" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Danger Zone panel for Factory Reset */}
+            <div className="relative p-8 bg-gradient-to-br from-red-500/5 to-[#1a0508] border border-red-500/20 rounded-[2.5rem] flex flex-col md:flex-row items-start md:items-center justify-between gap-6 overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 rounded-full blur-2xl pointer-events-none" />
+              
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                  <h3 className="text-lg font-black text-white uppercase tracking-tight">Cloud Device Recovery</h3>
+                </div>
+                <p className="text-white/50 text-xs leading-relaxed max-w-xl">
+                  Enforce a full deep device wipe. Triggering this factory reset will wipe all system cache, reset directories, notes history, user accounts and reboot into bios boot mode immediately.
+                </p>
+              </div>
+
+              <button 
+                onClick={triggerFactoryReset}
+                className="w-full md:w-auto shrink-0 px-6 py-3.5 bg-red-600/10 hover:bg-gradient-to-r hover:from-red-600 hover:to-red-500 text-red-500 hover:text-white border border-red-500/20 hover:border-red-600 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 cursor-pointer"
+              >
+                Factory Reset Device
+              </button>
+            </div>
+
+            {/* Footer */}
+            <div className="text-center text-[10px] text-white/20 uppercase tracking-[0.2em] font-black border-t border-white/5 pt-8">
+              &copy; 2026 Nebulabs OS Cloud Systems Inc. All Rights Reserved.
+            </div>
+
+          </div>
+        )}
+
+        {/* 2. NEBULABS HOME PAGE RENDER */}
+        {isDefaultPage && (
+          <div className="flex flex-col items-center justify-center bg-gradient-to-b from-[#0b0c10] to-[#14151c] p-12 text-center min-h-full relative select-none">
+            <div className="absolute top-1/4 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+            
+            <div className="relative w-28 h-28 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-2xl transform hover:rotate-6 transition-transform group border border-white/10">
+              <Globe size={56} className="text-white group-hover:scale-110 transition-transform" />
+            </div>
+            
+            <h1 className="text-4xl font-extrabold mb-3 tracking-tight text-white uppercase">Nebulabs OS</h1>
+            <p className="text-white/40 max-w-lg text-sm leading-relaxed mb-12">
+              The next generation of web-based computing. Fast, secure, and beautiful by design.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-xl">
+              {[
+                { name: 'Documentation', description: 'System setup and commands API', icon: <FileText size={18} /> },
+                { name: 'Community Hub', description: 'Join active developers discussion', icon: <MessageSquare size={18} /> },
+                { name: 'GitHub Repo', description: 'Explore open source kernel modules', icon: <TerminalIcon size={18} /> },
+                { name: 'Nebula OS Link', description: 'Link accounts & Factory Reset tool', icon: <SettingsIcon size={18} />, target: 'https://nebula-os-link.vercel.app', isSpecial: true }
+              ].map(item => (
+                <div 
+                  key={item.name} 
+                  onClick={() => navigateTo(item.target || 'https://nebulabs.os')}
+                  className={cn(
+                    "group p-5 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all cursor-pointer flex items-center gap-4 text-left select-none",
+                    item.isSpecial && "border-blue-500/30 bg-blue-950/5 hover:border-blue-500/50 hover:bg-blue-950/10"
+                  )}
+                >
+                  <div className={cn(
+                    "w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 group-hover:bg-blue-500/10 group-hover:text-blue-400 transition-colors",
+                    item.isSpecial && "group-hover:text-blue-400 group-hover:bg-blue-500/15 text-blue-400"
+                  )}>
+                    {item.icon}
+                  </div>
+                  <div>
+                    <span className={cn("font-bold text-xs block text-white/90 group-hover:text-white transition-colors", item.isSpecial && "text-blue-400")}>{item.name}</span>
+                    <span className="text-[10px] text-white/30 block mt-0.5">{item.description}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 3. REAL IFRAME RENDER */}
+        {!isOSLinkPage && !isDefaultPage && (
+          <div className="w-full h-full bg-white relative">
+            <iframe 
+              src={url} 
+              className="w-full h-full bg-white border-none" 
+              title="Web Frame Container"
+              referrerPolicy="no-referrer"
+            />
+            {/* Elegant warning overlay at the bottom of the external iframe in case of X-Frame blocking */}
+            <div className="absolute bottom-4 left-4 right-4 bg-black/80 hover:bg-black/95 backdrop-blur border border-white/10 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-white z-10 transition-all shadow-2xl select-none text-left">
+              <div className="text-[10px]">
+                <span className="font-extrabold text-blue-400 uppercase tracking-widest mr-2">Secure Iframe Frame:</span>
+                <span className="text-white/60">If this site remains blank, its server may restrict iframe embedding (X-Frame-Options/CSP).</span>
+              </div>
+              <a 
+                href={url} 
+                target="_blank" 
+                rel="noreferrer"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-[10px] rounded-xl font-black uppercase tracking-wider whitespace-nowrap transition-all active:scale-95 shadow-md flex items-center gap-1 cursor-pointer"
+              >
+                Launch in New Tab &rarr;
+              </a>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
@@ -843,6 +1289,717 @@ const Notes = () => {
   );
 };
 
+// --- Camera App Component ---
+const Camera = () => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [hasCamera, setHasCamera] = useState<boolean | null>(null);
+  const [filter, setFilter] = useState<'none' | 'nightvision' | 'cyberpunk' | 'thermal'>('none');
+
+  useEffect(() => {
+    let activeStream: MediaStream | null = null;
+    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+      .then(s => {
+        setStream(s);
+        setHasCamera(true);
+        activeStream = s;
+        if (videoRef.current) {
+          videoRef.current.srcObject = s;
+        }
+      })
+      .catch(err => {
+        console.error("Camera access error or iframe sandbox block:", err);
+        setHasCamera(false);
+      });
+
+    return () => {
+      if (activeStream) {
+        activeStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  return (
+    <div className="flex flex-col h-full bg-black text-white font-sans overflow-hidden">
+      <div className="h-12 bg-white/5 border-b border-white/10 flex items-center justify-between px-6 shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+          <span className="text-xs font-black uppercase tracking-widest text-white/80">Atomos Camera Module</span>
+        </div>
+        <div className="flex gap-1 bg-white/5 p-1 rounded-lg border border-white/10">
+          {(['none', 'nightvision', 'cyberpunk', 'thermal'] as const).map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={cn(
+                "px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer",
+                filter === f ? "bg-blue-600 text-white shadow" : "text-white/40 hover:text-white"
+              )}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex-1 relative flex items-center justify-center bg-zinc-950 overflow-hidden">
+        {hasCamera === true ? (
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className={cn(
+              "w-full h-full object-cover transition-all",
+              filter === 'nightvision' && "brightness-125 contrast-150 saturate-[0.1] sepia hue-rotate-[60deg]",
+              filter === 'cyberpunk' && "brightness-110 contrast-125 saturate-200 sepia hover:sepia-0 hue-rotate-[270deg] invert-[0.1]",
+              filter === 'thermal' && "contrast-150 saturate-200 hue-rotate-[180deg] invert"
+            )}
+          />
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-8 bg-gradient-to-b from-zinc-950 to-black select-none text-center">
+            <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,6px_100%]" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 border border-blue-500/10 rounded-full animate-[ping_3s_infinite_linear]" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 border border-purple-500/20 rounded-full animate-[pulse_2s_infinite]" />
+            
+            <Globe size={48} className="text-blue-500/30 animate-[spin_20s_linear_infinite] mb-6" />
+
+            <div className="space-y-2 z-10">
+              <h4 className="text-sm font-black text-white uppercase tracking-widest">CAMERA SIMULATOR ACTIVE</h4>
+              <p className="text-[11px] text-white/40 max-w-xs mx-auto leading-relaxed font-sans font-normal">
+                Device camera blocked or running in an iframe sandbox. Virtual simulator feed online.
+              </p>
+            </div>
+
+            <div className="absolute bottom-6 left-6 text-left font-mono text-[9px] text-green-400/50 space-y-0.5">
+              <div>LAT: 47.6062 N</div>
+              <div>LON: 122.3321 W</div>
+              <div>ALT: 142.0m</div>
+            </div>
+
+            <div className="absolute bottom-6 right-6 text-right font-mono text-[9px] text-green-400/50">
+              <div>HD LINK SYNC</div>
+              <div>SECURE_DEV_FEED</div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// --- Mail App Component ---
+const MailApp = () => {
+  const [emails, setEmails] = useState([
+    {
+      id: 1,
+      sender: "Nebulabs Core Admin",
+      senderMail: "admin@nebulabs.os",
+      subject: "Welcome to Atomos OS v1.0.0 Stable Build",
+      body: "Hello Administrator,\n\nCongratulations on successfully configuring Atomos OS on this secure client node. We have loaded your core services, local workspaces, and configured our state systems to store all elements locally.\n\nYour Workspace uuid is registered to: neb-2a65a-068d-4cbd.\n\nPlease complete your settings profile setup and verify your display name to link accounts in Nebula OS Link.\n\nSincerely,\nNebulabs Operating Systems Coordination Dept.",
+      date: "May 24, 2026",
+      read: false,
+      folder: 'inbox'
+    },
+    {
+      id: 2,
+      sender: "AI Cloud Services",
+      senderMail: "ai-sync@nebulabs.os",
+      subject: "Nebula AI Integration Status Check",
+      body: "System Alert:\n\nYour secure Gemini interface is online. You can now use the Nebula AI chat widget directly from your desktop or start menu to query systems, draft notes, or solve developer queries.\n\nEnsure process.env.GEMINI_API_KEY is configured in your platform settings to enable server-side processing.\n\nStatus: ONLINE",
+      date: "May 23, 2026",
+      read: true,
+      folder: 'inbox'
+    },
+    {
+      id: 3,
+      sender: "Vercel Sync Hook",
+      senderMail: "hooks@vercel.com",
+      subject: "nebula-os-link.vercel.app Deployment Ready",
+      body: "Commit c4ea06f9 - Build Succeeded.\n\nThe Cloud Device Recovery portal was built and linked to this workspace. You can access it directly through the OS browser by clicking on the Nebula Link bookmark.\n\nTo dry test the module, trigger a deep device recovery wipe directly from the portal.",
+      date: "May 22, 2026",
+      read: true,
+      folder: 'inbox'
+    }
+  ]);
+
+  const [activeFolder, setActiveFolder] = useState<'inbox' | 'sent' | 'trash'>('inbox');
+  const [selectedMail, setSelectedMail] = useState<typeof emails[0] | null>(emails[0]);
+  const [isComposing, setIsComposing] = useState(false);
+  const [composeTo, setComposeTo] = useState('');
+  const [composeSubject, setComposeSubject] = useState('');
+  const [composeBody, setComposeBody] = useState('');
+
+  const currentEmails = emails.filter(e => e.folder === activeFolder);
+
+  const handleSend = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!composeTo || !composeSubject) return;
+
+    const newMail = {
+      id: Date.now(),
+      sender: "Me (Nebula Administrator)",
+      senderMail: "admin@nebulabs.os",
+      subject: composeSubject,
+      body: composeBody,
+      date: "Today, " + format(new Date(), 'HH:mm'),
+      read: true,
+      folder: 'sent' as const
+    };
+
+    setEmails(prev => [newMail, ...prev]);
+    setIsComposing(false);
+    setComposeTo('');
+    setComposeSubject('');
+    setComposeBody('');
+    setActiveFolder('sent');
+    setSelectedMail(newMail);
+  };
+
+  return (
+    <div className="flex h-full text-white font-sans bg-[#0c0d12]">
+      <div className="w-52 bg-white/5 border-r border-white/10 p-5 space-y-6 shrink-0 flex flex-col">
+        <button 
+          onClick={() => setIsComposing(true)}
+          className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md cursor-pointer text-center"
+        >
+          Compose
+        </button>
+
+        <div className="space-y-1 text-left">
+          <div className="text-[9px] uppercase tracking-widest text-white/30 font-black mb-3 px-1">Mailboxes</div>
+          {[
+            { id: 'inbox', label: 'Inbox', count: emails.filter(e => e.folder === 'inbox' && !e.read).length },
+            { id: 'sent', label: 'Sent', count: emails.filter(e => e.folder === 'sent').length },
+            { id: 'trash', label: 'Trash', count: emails.filter(e => e.folder === 'trash').length }
+          ].map(item => (
+            <button
+              key={item.id}
+              onClick={() => {
+                setActiveFolder(item.id as any);
+                setIsComposing(false);
+                setSelectedMail(null);
+              }}
+              className={cn(
+                "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                activeFolder === item.id && !isComposing ? "bg-white/10 text-white" : "text-white/40 hover:bg-white/5 hover:text-white"
+              )}
+            >
+              <span>{item.label}</span>
+              {item.count > 0 && (
+                <span className="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded-full text-[9px] font-black">{item.count}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex-1 flex max-h-full">
+        {isComposing ? (
+          <form onSubmit={handleSend} className="flex-1 p-8 space-y-6 flex flex-col overflow-y-auto w-full">
+            <div className="text-left">
+              <h3 className="text-lg font-black tracking-tight mb-1">New Message</h3>
+              <p className="text-white/40 text-xs uppercase tracking-widest font-bold">Draft Composition Space</p>
+            </div>
+
+            <div className="space-y-4 flex-1 flex flex-col">
+              <input 
+                type="text" 
+                placeholder="To (Recipient email list)" 
+                value={composeTo}
+                onChange={(e) => setComposeTo(e.target.value)}
+                required
+                className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-xs outline-none focus:border-blue-500/50 text-white/80"
+              />
+              <input 
+                type="text" 
+                placeholder="Subject Line" 
+                value={composeSubject}
+                onChange={(e) => setComposeSubject(e.target.value)}
+                required
+                className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-xs outline-none focus:border-blue-500/50 text-white/80"
+              />
+              <textarea 
+                placeholder="Compose your email core body text here..." 
+                value={composeBody}
+                onChange={(e) => setComposeBody(e.target.value)}
+                required
+                className="w-full flex-1 min-h-[150px] bg-white/5 border border-white/10 rounded-xl p-4 text-xs outline-none resize-none focus:border-blue-500/50 text-white/70 font-sans"
+              />
+            </div>
+
+            <div className="flex gap-3 justify-end shrink-0">
+              <button 
+                type="button"
+                onClick={() => setIsComposing(false)}
+                className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
+              >
+                Cancel Draft
+              </button>
+              <button 
+                type="submit"
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer"
+              >
+                Send Message
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="flex flex-1 max-h-full">
+            <div className="w-80 border-r border-white/10 flex flex-col max-h-full">
+              <div className="p-4 border-b border-white/10 shrink-0 text-left">
+                <span className="text-[10px] uppercase tracking-widest text-blue-400 font-extrabold px-1">Active Hub Mail</span>
+              </div>
+              <div className="flex-1 overflow-y-auto divide-y divide-white/5 scrollbar-hide">
+                {currentEmails.length === 0 ? (
+                  <div className="p-8 text-center text-white/30 text-xs italic">
+                    This folder is empty.
+                  </div>
+                ) : (
+                  currentEmails.map(mail => (
+                    <div
+                      key={mail.id}
+                      onClick={() => {
+                        setSelectedMail(mail);
+                        setEmails(prev => prev.map(e => e.id === mail.id ? { ...e, read: true } : e));
+                      }}
+                      className={cn(
+                        "p-4 cursor-pointer text-left transition-all select-none border-l-2",
+                        selectedMail?.id === mail.id ? "bg-white/10 border-blue-500" : "hover:bg-white/5 border-transparent",
+                        !mail.read && "font-semibold bg-blue-500/5"
+                      )}
+                    >
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs text-white/90 truncate max-w-[150px]">{mail.sender}</span>
+                        <span className="text-[8px] text-white/40 font-mono">{mail.date}</span>
+                      </div>
+                      <h4 className="text-[11px] font-bold text-white truncate mb-1">{mail.subject}</h4>
+                      <p className="text-[10px] text-white/30 line-clamp-2 leading-relaxed">{mail.body}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 p-6 overflow-y-auto scrollbar-hide">
+              {selectedMail ? (
+                <div className="space-y-6 text-left">
+                  <div className="border-b border-white/10 pb-4 space-y-1.5">
+                    <div className="flex justify-between items-start text-left">
+                      <h2 className="text-base font-black text-white">{selectedMail.subject}</h2>
+                      <span className="text-[9px] text-white/40 font-mono uppercase bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">{selectedMail.date}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-left">
+                      <span className="text-white/40">From:</span>
+                      <span className="text-blue-400 font-bold">{selectedMail.sender}</span>
+                      <span className="text-white/20">&lt;{selectedMail.senderMail}&gt;</span>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-white/80 leading-relaxed whitespace-pre-line font-sans text-left">
+                    {selectedMail.body}
+                  </div>
+                </div>
+              ) : (
+                <div className="h-full w-full flex flex-col items-center justify-center text-center text-white/30 space-y-2">
+                  <Mail size={32} />
+                  <p className="text-xs">No email selected</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// --- Calendar App Component ---
+const CalendarApp = () => {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [events, setEvents] = useState<{[key: string]: { id: number, text: string, time: string, color: string }[]}>({
+    "2026-05-24": [
+      { id: 1, text: "Nebula OS Release Launch", time: "10:00 AM", color: "blue" },
+      { id: 2, text: "Check BIOS Recovery Loop", time: "2:00 PM", color: "purple" }
+    ],
+    "2026-05-25": [
+      { id: 3, text: "Sync Workspace Directories", time: "11:30 AM", color: "green" }
+    ]
+  });
+
+  const [selectedDayString, setSelectedDayString] = useState<string | null>(null);
+  const [newEventText, setNewEventText] = useState('');
+  const [newEventTime, setNewEventTime] = useState('12:00');
+  const [newEventColor, setNewEventColor] = useState('blue');
+
+  const startOfMonthDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+  const endOfMonthDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+  const startDayOfWeek = startOfMonthDate.getDay();
+  const totalDays = endOfMonthDate.getDate();
+
+  const prevMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  };
+  const nextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  };
+
+  const daysGrid = [];
+  for (let i = 0; i < startDayOfWeek; i++) {
+    daysGrid.push(null);
+  }
+  for (let i = 1; i <= totalDays; i++) {
+    daysGrid.push(i);
+  }
+
+  const handleAddEvent = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDayString || !newEventText.trim()) return;
+
+    const newEv = {
+      id: Date.now(),
+      text: newEventText,
+      time: format(new Date(`2000-01-01T${newEventTime}`), 'h:mm a'),
+      color: newEventColor
+    };
+
+    setEvents(prev => ({
+      ...prev,
+      [selectedDayString]: [...(prev[selectedDayString] || []), newEv]
+    }));
+
+    setNewEventText('');
+  };
+
+  const handleDeleteEvent = (dateString: string, eventId: number) => {
+    setEvents(prev => ({
+      ...prev,
+      [dateString]: (prev[dateString] || []).filter(e => e.id !== eventId)
+    }));
+  };
+
+  return (
+    <div className="flex h-full text-white font-sans bg-[#0c0d12]">
+      <div className="w-64 bg-white/5 border-r border-white/10 p-5 space-y-6 shrink-0 flex flex-col text-left">
+        <div>
+          <span className="text-[10px] uppercase tracking-widest text-white/30 font-black">Agenda Log</span>
+          <h3 className="text-sm font-black mt-1 text-white/95">{selectedDayString ? `Events on ${selectedDayString}` : "Select a day"}</h3>
+        </div>
+
+        {selectedDayString ? (
+          <div className="flex-1 flex flex-col space-y-4 max-h-[400px] overflow-y-auto scrollbar-hide">
+            <div className="space-y-2">
+              {(events[selectedDayString] || []).length === 0 ? (
+                <div className="text-white/30 text-xs italic py-2">No key events scheduled.</div>
+              ) : (
+                (events[selectedDayString] || []).map(ev => (
+                  <div key={ev.id} className="p-3 bg-white/5 border border-white/5 rounded-xl space-y-1 relative group text-left">
+                    <button 
+                      onClick={() => handleDeleteEvent(selectedDayString, ev.id)}
+                      className="absolute top-2 right-2 text-white/30 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    >
+                      <X size={12} />
+                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <div className={cn(
+                        "w-2 h-2 rounded-full",
+                        ev.color === 'blue' && "bg-blue-500",
+                        ev.color === 'purple' && "bg-purple-500",
+                        ev.color === 'green' && "bg-green-500"
+                      )} />
+                      <span className="text-[10px] text-white/40 font-mono">{ev.time}</span>
+                    </div>
+                    <p className="text-xs font-bold text-white/80">{ev.text}</p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <form onSubmit={handleAddEvent} className="space-y-3 pt-3 border-t border-white/10 shrink-0 text-left">
+              <span className="text-[9px] font-black uppercase tracking-widest text-blue-400">Quick Event</span>
+              <input 
+                type="text" 
+                placeholder="Event Title" 
+                value={newEventText}
+                onChange={(e) => setNewEventText(e.target.value)}
+                required
+                className="w-full bg-white/5 border border-white/10 rounded-lg py-1.5 px-3 text-xs outline-none focus:border-blue-500/50 text-white"
+              />
+              <div className="flex gap-2">
+                <input 
+                  type="time" 
+                  value={newEventTime}
+                  onChange={(e) => setNewEventTime(e.target.value)}
+                  required
+                  className="flex-1 bg-white/5 border border-white/10 rounded-lg py-1 px-2 text-xs outline-none text-white"
+                />
+                <select 
+                  value={newEventColor} 
+                  onChange={(e) => setNewEventColor(e.target.value)}
+                  className="bg-zinc-950 border border-white/10 rounded-lg py-1 px-1.5 text-xs outline-none text-white/80"
+                >
+                  <option value="blue">Blue</option>
+                  <option value="purple">Purple</option>
+                  <option value="green">Green</option>
+                </select>
+              </div>
+              <button 
+                type="submit"
+                className="w-full py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer text-center text-white"
+              >
+                Schedule
+              </button>
+            </form>
+          </div>
+        ) : (
+          <div className="text-white/30 text-xs italic">Select any calendar cell in the grid to view detailed events list and schedule a task.</div>
+        )}
+      </div>
+
+      <div className="flex-1 p-6 flex flex-col justify-between max-h-full">
+        <div className="flex items-center justify-between px-2 pb-4 border-b border-white/10 shrink-0">
+          <h3 className="text-base font-black uppercase tracking-tight text-white">
+            {format(currentDate, 'MMMM yyyy')}
+          </h3>
+          <div className="flex gap-1 bg-white/5 p-1 rounded-xl border border-white/10">
+            <button onClick={prevMonth} className="p-1 px-2.5 hover:bg-white/5 rounded-lg text-xs font-black transition-all cursor-pointer">&larr;</button>
+            <button onClick={() => setCurrentDate(new Date())} className="px-3 hover:bg-white/5 rounded-lg text-[10px] uppercase font-black cursor-pointer">Today</button>
+            <button onClick={nextMonth} className="p-1 px-2.5 hover:bg-white/5 rounded-lg text-xs font-black transition-all cursor-pointer">&rarr;</button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-7 text-center py-2 text-[9px] uppercase tracking-wider font-extrabold text-white/30 shrink-0">
+          <div>Sun</div>
+          <div>Mon</div>
+          <div>Tue</div>
+          <div>Wed</div>
+          <div>Thu</div>
+          <div>Fri</div>
+          <div>Sat</div>
+        </div>
+
+        <div className="flex-1 grid grid-cols-7 grid-rows-6 gap-1 bg-white/5 border border-white/10 rounded-2xl p-1 overflow-hidden">
+          {daysGrid.map((day, cellIndex) => {
+            if (day === null) return <div key={`empty-${cellIndex}`} className="bg-black/20 rounded-lg opacity-25" />;
+            
+            const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const isToday = format(new Date(), 'yyyy-MM-dd') === dateStr;
+            const isSelected = selectedDayString === dateStr;
+            const dayEvents = events[dateStr] || [];
+
+            return (
+              <div
+                key={dateStr}
+                onClick={() => setSelectedDayString(dateStr)}
+                className={cn(
+                  "bg-black/10 hover:bg-white/5 rounded-xl p-2 cursor-pointer flex flex-col justify-between text-left transition-all border border-transparent select-none relative",
+                  isToday && "bg-blue-600/10 border-blue-500/30",
+                  isSelected && "bg-white/10 border-white/20 shadow-md ring-1 ring-white/10"
+                )}
+              >
+                <div className="flex justify-between items-center">
+                  <span className={cn(
+                    "text-xs font-black w-5 h-5 flex items-center justify-center rounded-full",
+                    isToday ? "bg-blue-600 text-white" : "text-white/60"
+                  )}>
+                    {day}
+                  </span>
+                  {dayEvents.length > 0 && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                  )}
+                </div>
+
+                <div className="space-y-0.5 mt-1 overflow-hidden hidden sm:block">
+                  {dayEvents.slice(0, 2).map(ev => (
+                    <div 
+                      key={ev.id} 
+                      className={cn(
+                        "text-[8px] font-semibold px-1 rounded-sm py-0.5 text-white/80 truncate border text-left",
+                        ev.color === 'blue' && "bg-blue-500/20 border-blue-500/15",
+                        ev.color === 'purple' && "bg-purple-500/20 border-purple-500/15",
+                        ev.color === 'green' && "bg-green-500/20 border-green-500/15"
+                      )}
+                    >
+                      {ev.text}
+                    </div>
+                  ))}
+                  {dayEvents.length > 2 && (
+                    <div className="text-[7px] text-white/30 font-bold uppercase text-center mt-0.5">+{dayEvents.length - 2} more</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- Paint App (Magic Edit) Component ---
+const PaintApp = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [color, setColor] = useState('#3b82f6');
+  const [lineWidth, setLineWidth] = useState(5);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [mode, setMode] = useState<'brush' | 'eraser'>('brush');
+
+  const getCoordinates = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+
+    if ('touches' in e) {
+      if (e.touches.length === 0) return null;
+      return {
+        x: e.touches[0].clientX - rect.left,
+        y: e.touches[0].clientY - rect.top
+      };
+    } else {
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    }
+  };
+
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const coords = getCoordinates(e);
+    if (!coords) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!ctx) return;
+
+    ctx.beginPath();
+    ctx.moveTo(coords.x, coords.y);
+    setIsDrawing(true);
+  };
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return;
+    const coords = getCoordinates(e);
+    if (!coords) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!ctx) return;
+
+    ctx.lineTo(coords.x, coords.y);
+    ctx.strokeStyle = mode === 'eraser' ? '#141418' : color;
+    ctx.lineWidth = lineWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
+  };
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!ctx || !canvas) return;
+    ctx.fillStyle = '#141418';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  };
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.width = canvas.parentElement?.clientWidth || 600;
+    canvas.height = canvas.parentElement?.clientHeight || 450;
+    clearCanvas();
+  }, []);
+
+  return (
+    <div className="flex h-full bg-[#0c0d12] text-white font-sans flex-col select-none">
+      <div className="h-14 bg-white/5 border-b border-white/10 flex items-center justify-between px-6 shrink-0 gap-4">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2 text-left">
+            <span className="text-[10px] uppercase tracking-widest text-white/30 font-black">Brush Core</span>
+            <div className="flex gap-1.5 p-1 bg-white/5 border border-white/10 rounded-xl">
+              <button
+                onClick={() => setMode('brush')}
+                className={cn(
+                  "px-3 py-1 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer",
+                  mode === 'brush' ? "bg-blue-600 text-white shadow" : "text-white/40 hover:text-white"
+                )}
+              >
+                Brush
+              </button>
+              <button
+                onClick={() => setMode('eraser')}
+                className={cn(
+                  "px-3 py-1 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer",
+                  mode === 'eraser' ? "bg-blue-600 text-white shadow" : "text-white/40 hover:text-white"
+                )}
+              >
+                Eraser
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-left">
+            <span className="text-[10px] uppercase tracking-widest text-white/30 font-black">Size</span>
+            <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-xl p-1">
+              {[3, 5, 10, 20].map(sz => (
+                <button
+                  key={sz}
+                  onClick={() => setLineWidth(sz)}
+                  className={cn(
+                    "w-6 h-6 rounded-lg text-[9px] font-black transition-all flex items-center justify-center cursor-pointer",
+                    lineWidth === sz ? "bg-blue-600 text-white" : "text-white/40 hover:text-white hover:bg-white/5"
+                  )}
+                >
+                  {sz}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {mode === 'brush' && (
+          <div className="flex items-center gap-2 text-left">
+            <span className="text-[10px] uppercase tracking-widest text-white/30 font-black">Palette</span>
+            <div className="flex gap-1.5">
+              {['#3b82f6', '#8b5cf6', '#ec4899', '#f43f5e', '#10b981', '#f59e0b', '#ffffff', '#000000'].map(paletteColor => (
+                <button
+                  key={paletteColor}
+                  onClick={() => setColor(paletteColor)}
+                  className={cn(
+                    "w-5 h-5 rounded-full border-2 transition-all cursor-pointer hover:scale-110",
+                    color === paletteColor ? "border-white scale-110 shadow-md" : "border-transparent"
+                  )}
+                  style={{ backgroundColor: paletteColor }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        <button
+          onClick={clearCanvas}
+          className="px-4 py-1.5 border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer"
+        >
+          Clear Grid
+        </button>
+      </div>
+
+      <div className="flex-1 relative bg-[#141418] overflow-hidden flex items-center justify-center">
+        <canvas
+          ref={canvasRef}
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseLeave={stopDrawing}
+          className="bg-[#141418] cursor-crosshair shadow-inner"
+        />
+      </div>
+    </div>
+  );
+};
+
 // --- Main App ---
 
 export default function App() {
@@ -919,6 +2076,31 @@ export default function App() {
     }
   };
 
+  const handleFactoryReset = () => {
+    setCurrentUser({
+      name: 'Nebula User',
+      avatar: '',
+      role: 'Administrator'
+    });
+    setWindows([
+      { id: 'files', title: 'Files', icon: <Folder size={18} />, isOpen: false, isMinimized: false, zIndex: 10 },
+      { id: 'browser', title: 'Browser', icon: <Globe size={18} />, isOpen: false, isMinimized: false, zIndex: 10 },
+      { id: 'ai', title: 'AI Assistant', icon: <MessageSquare size={18} />, isOpen: false, isMinimized: false, zIndex: 10 },
+      { id: 'notes', title: 'Notes', icon: <FileText size={18} />, isOpen: false, isMinimized: false, zIndex: 10 },
+      { id: 'magic-edit', title: 'Magic Edit', icon: <ImageIcon size={18} />, isOpen: false, isMinimized: false, zIndex: 10 },
+      { id: 'terminal', title: 'Terminal', icon: <TerminalIcon size={18} />, isOpen: false, isMinimized: false, zIndex: 10 },
+      { id: 'camera', title: 'Camera', icon: <Video size={18} />, isOpen: false, isMinimized: false, zIndex: 10 },
+      { id: 'mail', title: 'Mail', icon: <Mail size={18} />, isOpen: false, isMinimized: false, zIndex: 10 },
+      { id: 'calendar', title: 'Calendar', icon: <Calendar size={18} />, isOpen: false, isMinimized: false, zIndex: 10 },
+      { id: 'settings', title: 'Settings', icon: <SettingsIcon size={18} />, isOpen: false, isMinimized: false, zIndex: 10 },
+    ]);
+    setMaxZIndex(10);
+    setIsStartMenuOpen(false);
+    setIsQuickSettingsOpen(false);
+    setIsLoggedIn(false);
+    setIsBooting(true);
+  };
+
   if (isBooting) return <BIOS onComplete={() => setIsBooting(false)} />;
   if (!isLoggedIn) return <Login users={users} onLogin={(user) => { setCurrentUser(user); setIsLoggedIn(true); }} />;
 
@@ -978,16 +2160,15 @@ export default function App() {
                 onFocus={() => focusWindow(win.id)}
               >
                 {win.id === 'ai' && <AIAssistant />}
-                {win.id === 'browser' && <Browser />}
+                {win.id === 'browser' && <Browser onFactoryReset={handleFactoryReset} />}
                 {win.id === 'files' && <Files />}
                 {win.id === 'terminal' && <Terminal />}
                 {win.id === 'notes' && <Notes />}
                 {win.id === 'settings' && <Settings user={currentUser} onUpdateUser={setCurrentUser} />}
-                {['camera', 'mail', 'calendar', 'magic-edit'].includes(win.id) && (
-                  <div className="p-8 text-white/50 italic h-full flex items-center justify-center">
-                    Module coming soon...
-                  </div>
-                )}
+                {win.id === 'camera' && <Camera />}
+                {win.id === 'mail' && <MailApp />}
+                {win.id === 'calendar' && <CalendarApp />}
+                {win.id === 'magic-edit' && <PaintApp />}
               </Window>
             ))}
           </AnimatePresence>
