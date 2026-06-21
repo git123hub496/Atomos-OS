@@ -19,7 +19,9 @@ import {
   Send,
   User,
   Bot,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Cloud,
+  CloudRain
 } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -453,7 +455,15 @@ const StartMenu = ({ isOpen, onOpenApp }: { isOpen: boolean, onOpenApp: (id: App
   );
 };
 
-const QuickSettings = ({ isOpen }: { isOpen: boolean }) => {
+const QuickSettings = ({ 
+  isOpen,
+  showWidgets,
+  setShowWidgets
+}: { 
+  isOpen: boolean,
+  showWidgets: { clock: boolean, weather: boolean, stats: boolean },
+  setShowWidgets: React.Dispatch<React.SetStateAction<{ clock: boolean, weather: boolean, stats: boolean }>>
+}) => {
   if (!isOpen) return null;
 
   return (
@@ -506,6 +516,32 @@ const QuickSettings = ({ isOpen }: { isOpen: boolean }) => {
             <div className="h-1.5 w-full bg-black/5 rounded-full overflow-hidden">
               <div className="h-full w-[60%] bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.3)]" />
             </div>
+          </div>
+        </div>
+
+        <div className="border-t border-black/5 pt-4 space-y-3">
+          <div className="text-[10px] font-black uppercase tracking-widest text-black/30 px-1 text-left">
+            Desktop Widgets
+          </div>
+          <div className="flex gap-2">
+            {[
+              { id: 'clock', label: 'Clock' },
+              { id: 'weather', label: 'Weather' },
+              { id: 'stats', label: 'Stats' }
+            ].map(w => (
+              <button
+                key={w.id}
+                onClick={() => setShowWidgets(prev => ({ ...prev, [w.id]: !prev[w.id as keyof typeof prev] }))}
+                className={cn(
+                  "flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer",
+                  showWidgets[w.id as keyof typeof showWidgets] 
+                    ? "bg-blue-600/10 text-blue-600 border border-blue-500/20" 
+                    : "bg-black/5 text-black/40 border border-transparent hover:bg-black/10"
+                )}
+              >
+                {w.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -704,13 +740,15 @@ const AIAssistant = () => {
 
 const Browser = ({ 
   onFactoryReset, 
-  url, 
+  url: externalUrl, 
   onUrlChange 
 }: { 
   onFactoryReset?: () => void, 
-  url: string, 
-  onUrlChange: (url: string) => void 
+  url?: string, 
+  onUrlChange?: (url: string) => void 
 }) => {
+  const [localUrl, setLocalUrl] = useState('https://nebulabs.os');
+  const url = externalUrl !== undefined ? externalUrl : localUrl;
   const [inputValue, setInputValue] = useState(url);
   const [isWiping, setIsWiping] = useState(false);
   const [wipeProgress, setWipeProgress] = useState(0);
@@ -726,7 +764,11 @@ const Browser = ({
     if (!formatted.startsWith('http://') && !formatted.startsWith('https://')) {
       formatted = 'https://' + formatted;
     }
-    onUrlChange(formatted);
+    if (onUrlChange) {
+      onUrlChange(formatted);
+    } else {
+      setLocalUrl(formatted);
+    }
     setInputValue(formatted);
   };
 
@@ -2000,6 +2042,135 @@ const PaintApp = () => {
   );
 };
 
+
+// --- Desktop Widgets ---
+
+interface WidgetProps {
+  onClose: () => void;
+}
+
+const ClockWidget = ({ onClose }: WidgetProps) => {
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="w-56 p-5 bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[1.5rem] text-white shadow-2xl pointer-events-auto select-none relative group transition-all duration-300 hover:border-white/20">
+      <button 
+        onClick={onClose}
+        className="absolute top-3 right-3 text-white/20 hover:text-white/60 transition-colors"
+      >
+        <X size={12} />
+      </button>
+      <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 mb-2 flex items-center gap-1.5">
+        <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+        Atomos Clock
+      </div>
+      <div className="text-3xl font-black tracking-tight font-mono">
+        {format(time, 'HH:mm:ss')}
+      </div>
+      <div className="text-[10px] text-white/40 font-bold uppercase tracking-wider mt-1">
+        {format(time, 'EEEE, LLLL d')}
+      </div>
+    </div>
+  );
+};
+
+const WeatherWidget = ({ onClose }: WidgetProps) => {
+  const [temp, setTemp] = useState(21.4);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTemp(t => t + (Math.random() > 0.5 ? 0.1 : -0.1));
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="w-56 p-5 bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[1.5rem] text-white shadow-2xl pointer-events-auto select-none relative group transition-all duration-300 hover:border-white/20">
+      <button 
+        onClick={onClose}
+        className="absolute top-3 right-3 text-white/20 hover:text-white/60 transition-colors"
+      >
+        <X size={12} />
+      </button>
+      <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 mb-2 flex items-center gap-1.5">
+        <Cloud size={12} className="text-blue-400" />
+        Synoptic Node
+      </div>
+      <div className="flex items-center gap-3">
+        <CloudRain size={28} className="text-blue-200 animate-bounce" style={{ animationDuration: '3s' }} />
+        <div className="text-left">
+          <div className="text-2xl font-black tracking-tight">{temp.toFixed(1)}°C</div>
+          <div className="text-[9px] text-white/40 uppercase tracking-wider font-extrabold">Dreamy Clouds</div>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2 text-[8px] font-bold uppercase tracking-wider text-white/30 border-t border-white/5 pt-2">
+        <div className="text-left">
+          <span className="block text-white/50 text-[7px]">Wind</span>
+          <span className="text-white/60 font-mono">12 km/h</span>
+        </div>
+        <div className="text-left">
+          <span className="block text-white/50 text-[7px]">Humidity</span>
+          <span className="text-white/60 font-mono">78%</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const StatsWidget = ({ onClose }: WidgetProps) => {
+  const [cpu, setCpu] = useState(38);
+  const [ram] = useState(2.1);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCpu(Math.floor(25 + Math.random() * 30));
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="w-56 p-5 bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[1.5rem] text-white shadow-2xl pointer-events-auto select-none relative group transition-all duration-300 hover:border-white/20">
+      <button 
+        onClick={onClose}
+        className="absolute top-3 right-3 text-white/20 hover:text-white/60 transition-colors"
+      >
+        <X size={12} />
+      </button>
+      <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 mb-3 flex items-center gap-1.5">
+        <TerminalIcon size={12} className="text-purple-400" />
+        Core Telemetry
+      </div>
+      
+      <div className="space-y-2.5">
+        <div className="space-y-1">
+          <div className="flex justify-between text-[8px] font-black uppercase tracking-wider text-white/40">
+            <span>CPU Core</span>
+            <span className="font-mono text-purple-400">{cpu}%</span>
+          </div>
+          <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+            <div className="h-full bg-purple-500 transition-all duration-1000" style={{ width: `${cpu}%` }} />
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <div className="flex justify-between text-[8px] font-black uppercase tracking-wider text-white/40">
+            <span>Core RAM</span>
+            <span className="font-mono text-blue-400">{ram} GB / 4.0 GB</span>
+          </div>
+          <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+            <div className="h-full bg-blue-500 transition-all duration-1000" style={{ width: `${(ram / 4.0) * 100}%` }} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- Main App ---
 
 export default function App() {
@@ -2032,6 +2203,12 @@ export default function App() {
     { id: 'settings', title: 'Settings', icon: <SettingsIcon size={18} />, isOpen: false, isMinimized: false, zIndex: 10 },
   ]);
   const [maxZIndex, setMaxZIndex] = useState(10);
+  const [browserUrl, setBrowserUrl] = useState('https://nebulabs.os');
+  const [showWidgets, setShowWidgets] = useState({
+    clock: true,
+    weather: true,
+    stats: true
+  });
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -2111,15 +2288,51 @@ export default function App() {
       <div 
         className="absolute inset-0 bg-cover bg-center transition-all duration-1000"
         style={{ 
-          backgroundImage: `url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop')`,
+          backgroundImage: `url('/src/assets/images/cosmic_cloud_wallpaper_1782007785959.jpg')`,
           filter: 'brightness(0.9) contrast(1.1)'
         }}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-600/20 via-transparent to-blue-600/20" />
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-505/20 via-transparent to-pink-500/10" />
+      </div>
+
+      {/* Widgets Layer (Desktop Background Widgets) */}
+      <div className="absolute inset-x-0 top-12 bottom-16 pointer-events-none z-[1]">
+        {showWidgets.clock && (
+          <motion.div 
+            drag 
+            dragMomentum={false}
+            dragElastic={0}
+            className="absolute right-24 top-12 cursor-grab active:cursor-grabbing pointer-events-auto"
+          >
+            <ClockWidget onClose={() => setShowWidgets(prev => ({ ...prev, clock: false }))} />
+          </motion.div>
+        )}
+
+        {showWidgets.weather && (
+          <motion.div 
+            drag 
+            dragMomentum={false}
+            dragElastic={0}
+            className="absolute right-24 top-[230px] cursor-grab active:cursor-grabbing pointer-events-auto"
+          >
+            <WeatherWidget onClose={() => setShowWidgets(prev => ({ ...prev, weather: false }))} />
+          </motion.div>
+        )}
+
+        {showWidgets.stats && (
+          <motion.div 
+            drag 
+            dragMomentum={false}
+            dragElastic={0}
+            className="absolute right-24 top-[420px] cursor-grab active:cursor-grabbing pointer-events-auto"
+          >
+            <StatsWidget onClose={() => setShowWidgets(prev => ({ ...prev, stats: false }))} />
+          </motion.div>
+        )}
       </div>
 
       {/* Sidebar */}
-      <div className="absolute left-8 top-12 flex flex-col gap-8">
+      <div className="absolute left-8 top-12 flex flex-col gap-8 z-10">
         {[
           { id: 'files', icon: <Folder size={24} />, label: 'Files', color: 'bg-blue-500' },
           { id: 'browser', icon: <Globe size={24} />, label: 'Browser', color: 'bg-indigo-500' },
@@ -2148,7 +2361,7 @@ export default function App() {
       </div>
 
       {/* Windows Layer */}
-      <div className="absolute inset-0 pointer-events-none">
+      <div className="absolute inset-0 pointer-events-none z-20">
         <div className="relative w-full h-full pointer-events-auto">
           <AnimatePresence>
             {windows.map(win => (
@@ -2160,11 +2373,27 @@ export default function App() {
                 onFocus={() => focusWindow(win.id)}
               >
                 {win.id === 'ai' && <AIAssistant />}
-                {win.id === 'browser' && <Browser onFactoryReset={handleFactoryReset} />}
+                {win.id === 'browser' && (
+                  <Browser 
+                    onFactoryReset={handleFactoryReset} 
+                    url={browserUrl}
+                    onUrlChange={setBrowserUrl}
+                  />
+                )}
                 {win.id === 'files' && <Files />}
                 {win.id === 'terminal' && <Terminal />}
                 {win.id === 'notes' && <Notes />}
-                {win.id === 'settings' && <Settings user={currentUser} onUpdateUser={setCurrentUser} />}
+                {win.id === 'settings' && (
+                  <Settings 
+                    user={currentUser} 
+                    onUpdateUser={setCurrentUser} 
+                    onFactoryReset={handleFactoryReset}
+                    onResetToNebulaOSLink={() => {
+                      setBrowserUrl('https://nebula-os-link.vercel.app');
+                      openWindow('browser');
+                    }}
+                  />
+                )}
                 {win.id === 'camera' && <Camera />}
                 {win.id === 'mail' && <MailApp />}
                 {win.id === 'calendar' && <CalendarApp />}
@@ -2184,7 +2413,11 @@ export default function App() {
             setIsStartMenuOpen(false);
           }} 
         />
-        <QuickSettings isOpen={isQuickSettingsOpen} />
+        <QuickSettings 
+          isOpen={isQuickSettingsOpen} 
+          showWidgets={showWidgets}
+          setShowWidgets={setShowWidgets}
+        />
       </AnimatePresence>
 
       {/* Bottom Taskbar */}
